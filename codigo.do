@@ -3,7 +3,7 @@
 // 20.531.787-2
 // [0] Preliminares
 clear all
-cd "C:\Users\Casa\Desktop\tareas_oi\tarea_2"
+cd "C:\Users\Alumno FEN\Desktop\oi\tarea2"
 use autos.dta
 
 // [1] Número de modelos por segmento para cada año. Media por segmento de precio, características y número de modelos
@@ -27,8 +27,8 @@ gen intraGroupShare = log(sj/sg1)
 // [c] Variables instrumentales
 
 * Características de otros productos del mismo segmento
-bys year sg5: egen othersPriceInSeg = total(price)
-replace othersPriceInSeg = othersPriceInSeg - price
+*bys year sg5: egen othersPriceInSeg = total(price)
+*replace othersPriceInSeg = othersPriceInSeg - price
 
 bys year sg5: egen othersCcwInSeg = total(ccw)
 replace othersCcwInSeg = othersCcwInSeg - ccw
@@ -41,8 +41,8 @@ replace othersSizeInSeg = othersSizeInSeg - size
 
 * Características de otros productos de la misma firma en el mismo segmento
 
-bys year sg5 brand: egen othersPriceInFirm = total(price)
-replace othersPriceInFirm = othersPriceInFirm - ccw
+*bys year sg5 brand: egen othersPriceInFirm = total(price)
+*replace othersPriceInFirm = othersPriceInFirm - ccw
 
 bys year sg5 brand: egen othersCcwInFirm = total(ccw)
 replace othersCcwInFirm = othersCcwInFirm - ccw
@@ -64,25 +64,33 @@ gen nProductsCompetitors = nProductsInSeg - nProductsInFirm
 * replace othersSizeInFirm = 0 if nProductsInFirm == 1
 
 // Estadistica descriptiva
-
-tabstat 
+* Tabla1
+tabstat meanUtility intraGroupShare nProductsCompetitors nProductsInFirm, by(sg5) stat(mean sd) f(%9.2f) nototal 
+* Tabla2
+tabstat othersCcwInSeg othersCcwInFirm othersMspeedInSeg othersMspeedInFirm othersSizeInSeg othersSizeInFirm, by(sg5) stat(mean sd) f(%9.2f) nototal 
 
 // [3] Modelo Logit
 
 // [a] Características y precio
 reg meanUtility price ccw mspeed size
+outreg2 using tabla3.tex
 // [b] Características, precio y dummies por año
 reg meanUtility price ccw mspeed size i.year
+outreg2 using tabla3.tex, append keep(price ccw mspeed size)
 // [c] Características, precio, dummies por año y por firma
 reg meanUtility price ccw mspeed size i.year i.brand
+outreg2 using tabla3.tex, append keep(price ccw mspeed size)
 
 // [4] Modelo Logit con IV
 
 // [a] 
-ivregress 2sls meanUtility (price = othersPriceInSeg othersCcwInSeg othersMspeedInSeg othersSizeInSeg nProductsCompetitors) ccw mspeed size i.year i.brand
+ivregress 2sls meanUtility (price = othersCcwInSeg othersMspeedInSeg othersSizeInSeg nProductsCompetitors) ccw mspeed size i.year i.brand
+outreg2 using tabla4.tex, keep(price ccw mspeed size)
 
 // [b]
-ivregress 2sls meanUtility (price = othersPriceInSeg othersPriceInFirm othersCcwInSeg othersCcwInFirm othersMspeedInSeg othersMspeedInFirm othersSizeInSeg othersSizeInFirm nProductsCompetitors nProductsInFirm) ccw mspeed size i.year i.brand
+ivregress 2sls meanUtility (price = othersCcwInSeg othersCcwInFirm othersMspeedInSeg othersMspeedInFirm othersSizeInSeg othersSizeInFirm nProductsCompetitors nProductsInFirm) ccw mspeed size i.year i.brand
+outreg2 using tabla4.tex, append keep(price ccw mspeed size)
+
 
 // [5] Modelo Nested Logit
 ivregress 2sls meanUtility (price = othersPriceInSeg othersPriceInFirm othersCcwInSeg othersCcwInFirm othersMspeedInSeg othersMspeedInFirm othersSizeInSeg othersSizeInFirm nProductsCompetitors nProductsInFirm) intraGroupShare ccw mspeed size i.year i.brand
